@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>World Cup Sweepstake Draw</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&display=swap" rel="stylesheet">
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/seedrandom/3.0.5/seedrandom.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #07111f;
+      --panel: rgba(255,255,255,0.03);
+      --panel-border: rgba(255,255,255,0.06);
+      --text: #f5f7fb;
+      --muted: #8a9bb3;
+      --accent: #35d0ba;
+      --accent-glow: rgba(53, 208, 186, 0.4);
+      --accent-2: #ffcb4c;
+      --accent-2-glow: rgba(255, 203, 76, 0.3);
+      --danger: #ff5c7a;
+      --success: #72f29b;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'Outfit', Arial, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(53,208,186,0.15), transparent 40%),
+        radial-gradient(circle at bottom right, rgba(255,203,76,0.12), transparent 40%),
+        var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    .app {
+      width: min(1700px, 98vw);
+      margin: 0 auto;
+      padding: 24px 0 40px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2.2rem, 4.5vw, 4.8rem);
+      letter-spacing: -1.5px;
+      text-transform: uppercase;
+      font-weight: 900;
+      background: linear-gradient(135deg, #fff, #aeb9ca);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5));
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin-top: 8px;
+      font-size: 1.15rem;
+      font-weight: 400;
+      letter-spacing: 0.5px;
+    }
+
+    .draw-mascot {
+      height: 78px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 34px;
+      margin-top: 12px;
+    }
+
+    .football { font-size: 3rem; }
+    .hat { 
+      font-size: 3.35rem; 
+      filter: drop-shadow(0 10px 12px rgba(0,0,0,0.4));
+    }
+
+    .draw-mascot.drawing .football { animation: ballBounce 0.9s ease; }
+    .draw-mascot.drawing .hat { animation: hatShake 0.45s ease 2; }
+
+    @keyframes ballBounce {
+      0% { transform: translateY(0) rotate(0deg); }
+      35% { transform: translateY(-34px) rotate(120deg); }
+      70% { transform: translateY(12px) rotate(260deg); }
+      100% { transform: translateY(0) rotate(360deg); }
+    }
+
+    @keyframes hatShake {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(-8deg); }
+      75% { transform: rotate(8deg); }
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin: 10px 0 24px;
+    }
+
+    .seed-input {
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.12);
+      padding: 14px 20px;
+      border-radius: 999px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      outline: none;
+      width: 180px;
+      transition: all 0.3s ease;
+      text-align: center;
+    }
+
+    .seed-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 15px var(--accent-glow);
+    }
+
+    button {
+      border: 0;
+      color: #05101d;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      padding: 14px 26px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 1rem;
+      font-family: inherit;
+      cursor: pointer;
+      box-shadow: 0 8px 24px var(--accent-glow);
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    button:hover { 
+      transform: translateY(-3px) scale(1.02); 
+      box-shadow: 0 12px 28px var(--accent-glow);
+    }
+    
+    button:disabled { 
+      opacity: 0.45; 
+      cursor: not-allowed; 
+      transform: none; 
+      box-shadow: none;
+      background: #334155;
+      color: #94a3b8;
+    }
+
+    .ghost-button {
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: none;
+    }
+
+    .ghost-button:hover {
+      background: rgba(255,255,255,0.1);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    }
+
+    .draw-status {
+      color: var(--accent);
+      min-width: 300px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 1.05rem;
+      letter-spacing: 0.5px;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: 0.9fr 1.4fr 0.9fr;
+      gap: 20px;
+      align-items: start;
+      position: relative;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 28px;
+      padding: 18px;
+      box-shadow: 0 24px 48px rgba(0,0,0,0.3);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    .panel-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 0 0 16px;
+      padding: 0 8px;
+      gap: 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      padding-bottom: 12px;
+    }
+
+    .panel-title h2 {
+      margin: 0;
+      font-size: 1.15rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 800;
+    }
+
+    .counter {
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .team-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .player-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .team-card,
+    .player-card {
+      min-height: 48px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.05);
+      display: grid;
+      align-items: center;
+      transition: all 0.2s ease;
+    }
+    
+    .team-card:hover, .player-card:hover {
+      background: rgba(255,255,255,0.08);
+      transform: translateY(-2px);
+    }
+
+    .team-card {
+      grid-template-columns: 42px 1fr auto;
+      padding: 8px 12px;
+    }
+
+    .team-card.used {
+      opacity: 0.25;
+      filter: grayscale(1);
+      transform: none;
+    }
+
+    .team-rank {
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 800;
+    }
+
+    .flag {
+      width: 32px;
+      height: 22px;
+      object-fit: cover;
+      border-radius: 4px;
+      margin-right: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.1);
+      vertical-align: middle;
+      flex: 0 0 auto;
+    }
+
+    .team-name {
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95rem;
+      min-width: 0;
+    }
+
+    .team-pill {
+      font-size: 0.65rem;
+      color: #05101d;
+      background: var(--accent-2);
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .team-pill.bottom { background: var(--accent); }
+
+    .players-panel {
+      position: sticky;
+      top: 20px;
+    }
+
+    .player-card {
+      grid-template-columns: 48px 1fr;
+      gap: 10px;
+      padding: 10px 12px;
+      min-height: 64px;
+    }
+
+    .player-card.highlight {
+      background: rgba(255,203,76,0.15);
+      border-color: rgba(255,203,76,0.5);
+      transform: scale(1.03);
+      box-shadow: 0 0 20px var(--accent-2-glow);
+    }
+
+    .player-name {
+      font-weight: 800;
+      font-size: 1rem;
+      margin-bottom: 4px;
+    }
+
+    .assignments {
+      display: grid;
+      gap: 4px;
+      color: var(--muted);
+      font-size: 0.75rem;
+      line-height: 1.2;
+    }
+
+    .assignment-line strong {
+      color: var(--text);
+      display: inline-flex;
+      align-items: center;
+      font-weight: 600;
+    }
+
+    .assignment-line .flag {
+      width: 20px;
+      height: 14px;
+      margin-right: 6px;
+    }
+
+    .number-badge {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+      color: var(--accent-2);
+      font-weight: 900;
+      font-size: 0.95rem;
+    }
+
+    .flying-team {
+      position: fixed;
+      z-index: 100;
+      pointer-events: none;
+      background: white;
+      color: #06111f;
+      padding: 14px 22px;
+      border-radius: 999px;
+      font-weight: 800;
+      box-shadow: 0 24px 50px rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: transform 0.85s cubic-bezier(.2,.9,.2,1), opacity 0.85s ease;
+      white-space: nowrap;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .draw-reveal {
+      position: fixed;
+      inset: 0;
+      z-index: 180;
+      display: none;
+      place-items: center;
+      background: rgba(3,8,15,0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 20px;
+    }
+
+    .draw-reveal.visible { display: grid; }
+
+    .draw-slip {
+      width: min(860px, 94vw);
+      min-height: 480px;
+      background: linear-gradient(135deg, #ffffff, #f0f4f8);
+      color: #06111f;
+      border-radius: 36px;
+      padding: clamp(28px, 5vw, 48px);
+      text-align: center;
+      box-shadow: 0 0 80px rgba(255, 203, 76, 0.15), 0 40px 100px rgba(0,0,0,0.8);
+      animation: slipPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+      border: 6px solid var(--accent-2);
+    }
+
+    @keyframes slipPop {
+      from { transform: scale(0.8) rotate(-4deg); opacity: 0; }
+      to { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+
+    .draw-slip-label {
+      font-size: 1.1rem;
+      font-weight: 900;
+      letter-spacing: 3px;
+      color: #64748b;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .draw-slip-player {
+      font-size: clamp(3rem, 7vw, 5.5rem);
+      font-weight: 900;
+      text-transform: uppercase;
+      line-height: 1;
+      letter-spacing: -2px;
+      color: #0f172a;
+    }
+
+    .draw-slip-divider {
+      width: 60%;
+      height: 4px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      margin: 36px auto;
+      border-radius: 999px;
+    }
+
+    .draw-slip-flag {
+      width: clamp(120px, 16vw, 180px);
+      height: clamp(80px, 11vw, 120px);
+      object-fit: cover;
+      border-radius: 12px;
+      box-shadow: 0 16px 32px rgba(0,0,0,0.2);
+      border: 4px solid white;
+      margin-bottom: 20px;
+    }
+
+    .draw-slip-team {
+      font-size: clamp(1.4rem, 3.5vw, 2.8rem);
+      font-weight: 900;
+      text-transform: uppercase;
+      line-height: 1;
+      letter-spacing: -1px;
+    }
+
+    .double-reveal-teams {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      width: 100%;
+    }
+
+    .reveal-team-card {
+      background: rgba(15, 23, 42, 0.04);
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      border-radius: 24px;
+      padding: 24px 16px;
+      opacity: 0;
+      animation: revealTeamPop 0.8s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+      animation-delay: 0.5s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .reveal-team-card.underdog-card { animation-delay: 1.2s; }
+
+    .reveal-team-label {
+      font-size: 0.9rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: #64748b;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    @keyframes revealTeamPop {
+      from { transform: translateY(24px) scale(0.9); opacity: 0; }
+      to { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    @media (max-width: 680px) {
+      .double-reveal-teams { grid-template-columns: 1fr; }
+      .reveal-team-card { padding: 16px; }
+    }
+
+    .final-overlay,
+    .names-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(3,8,15,0.9);
+      z-index: 200;
+      padding: 28px;
+      overflow: auto;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    .final-overlay.visible,
+    .names-overlay.visible { display: block; }
+
+    .final-card,
+    .names-card {
+      width: min(1000px, 96vw);
+      margin: 0 auto;
+      background: #0f172a;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 32px;
+      padding: 32px;
+      box-shadow: 0 32px 90px rgba(0,0,0,0.6);
+      animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.95) translateY(10px); opacity: 0; }
+      to { transform: scale(1) translateY(0); opacity: 1; }
+    }
+
+    .final-header,
+    .names-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-bottom: 16px;
+    }
+
+    .final-header h2,
+    .names-header h2 {
+      margin: 0;
+      font-size: clamp(1.8rem, 3vw, 2.8rem);
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: -1px;
+    }
+
+    .results-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .results-table th,
+    .results-table td {
+      padding: 16px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      background: rgba(255,255,255,0.02);
+    }
+
+    .results-table th {
+      color: var(--accent-2);
+      background: rgba(255,255,255,0.06);
+      text-transform: uppercase;
+      font-size: 0.85rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+    }
+
+    .small-note {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-top: 16px;
+      font-weight: 400;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 360px;
+      background: rgba(0,0,0,0.2);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 16px;
+      padding: 20px;
+      font-size: 1.05rem;
+      font-family: inherit;
+      line-height: 1.5;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    
+    textarea:focus { border-color: var(--accent); }
+
+    .names-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    .confetti-piece {
+      position: fixed;
+      z-index: 300;
+      top: -20px;
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+      opacity: 0.95;
+      pointer-events: none;
+      animation: confettiFall linear forwards;
+    }
+
+    @keyframes confettiFall {
+      to {
+        transform: translateY(110vh) rotate(720deg);
+        opacity: 0.9;
+      }
+    }
+
+    @media (max-width: 1200px) {
+      .player-list { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 1000px) {
+      .board { grid-template-columns: 1fr; }
+      .players-panel { position: static; order: -1; }
+      .player-list { grid-template-columns: 1fr 1fr; }
+    }
+    
+    @media (max-width: 600px) {
+      .player-list { grid-template-columns: 1fr; }
+      .seed-input { width: 100%; }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="app">
+    <header>
+      <h1>World Cup Sweepstake</h1>
+      <div class="subtitle">24 entrants. One top-ranked team. One underdog. Pure chaos.</div>
+
+      <div class="draw-mascot" id="drawMascot">
+        <div class="hat">🎩</div>
+        <div class="football">⚽</div>
+        <div class="hat">🎩</div>
+      </div>
+    </header>
+
+    <section class="controls">
+      <input type="text" id="drawSeed" class="seed-input" value="Heavyweights" placeholder="Enter draw seed..." title="Seed phrase for provably fair random draws">
+      <button id="drawButton">Draw Next Player</button>
+      <button id="autoButton" class="ghost-button">Auto Draw: Off</button>
+      <button id="namesButton" class="ghost-button">Edit Entrants</button>
+      <button id="finalButton" class="ghost-button" disabled>Show Final Breakdown</button>
+      <button id="resetButton" class="ghost-button">Reset Draw</button>
+      <div class="draw-status" id="drawStatus">Ready to draw first player</div>
+    </section>
+
+    <section class="board">
+      <aside class="panel">
+        <div class="panel-title">
+          <h2>Top 24 Teams</h2>
+          <span class="counter" id="topCounter">0 / 24 drawn</span>
+        </div>
+        <div class="team-list" id="topTeams"></div>
+      </aside>
+
+      <section class="panel players-panel">
+        <div class="panel-title">
+          <h2>Entrants</h2>
+          <span class="counter" id="playerCounter">0 / 24 players</span>
+        </div>
+        <div class="player-list" id="players"></div>
+      </section>
+
+      <aside class="panel">
+        <div class="panel-title">
+          <h2>Bottom 24 Teams</h2>
+          <span class="counter" id="bottomCounter">0 / 24 drawn</span>
+        </div>
+        <div class="team-list" id="bottomTeams"></div>
+      </aside>
+    </section>
+  </main>
+
+  <section class="draw-reveal" id="drawReveal">
+    <div class="draw-slip">
+      <div class="draw-slip-label" id="revealType">PLAYER DRAW</div>
+      <div class="draw-slip-player" id="revealPlayer">TEST #1</div>
+      <div class="draw-slip-divider"></div>
+      <div class="double-reveal-teams">
+        <div class="reveal-team-card">
+          <div class="reveal-team-label">Top 24 Team</div>
+          <img class="draw-slip-flag" id="revealTopFlag" src="" alt="">
+          <div class="draw-slip-team" id="revealTopTeam">BRAZIL</div>
+        </div>
+        <div class="reveal-team-card underdog-card">
+          <div class="reveal-team-label">Underdog</div>
+          <img class="draw-slip-flag" id="revealBottomFlag" src="" alt="">
+          <div class="draw-slip-team" id="revealBottomTeam">CANADA</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="names-overlay" id="namesOverlay">
+    <div class="names-card">
+      <div class="names-header">
+        <h2>Edit Entrants</h2>
+        <button class="ghost-button" id="closeNames">Close</button>
+      </div>
+      <p class="small-note">Enter one name per line. It will use the first 24 names only.</p>
+      <textarea id="namesTextarea"></textarea>
+      <div class="names-actions">
+        <button id="saveNamesButton">Save Entrants</button>
+        <button id="fillTestNamesButton" class="ghost-button">Use Test Names</button>
+      </div>
+      <p class="small-note">Changing names will reset the draw and lock in the current seed.</p>
+    </div>
+  </section>
+
+  <section class="final-overlay" id="finalOverlay">
+    <div class="final-card">
+      <div class="final-header">
+        <h2>Final Sweepstake Draw</h2>
+        <button class="ghost-button" id="closeFinal">Close</button>
+      </div>
+
+      <table class="results-table">
+        <thead>
+          <tr>
+            <th>Entrant</th>
+            <th>Top 24 Team</th>
+            <th>Bottom 24 Team</th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+
+      <div class="small-note">Screenshot this bit and drop it in the WhatsApp group. Provably fair via seed phrase.</div>
+    </div>
+  </section>
+
+  <script>
+    const topTeams = [
+      { rank: 1, name: 'France', flag: 'https://flagcdn.com/w40/fr.png' },
+      { rank: 2, name: 'Spain', flag: 'https://flagcdn.com/w40/es.png' },
+      { rank: 3, name: 'Argentina', flag: 'https://flagcdn.com/w40/ar.png' },
+      { rank: 4, name: 'England', flag: 'https://flagcdn.com/w40/gb-eng.png' },
+      { rank: 5, name: 'Portugal', flag: 'https://flagcdn.com/w40/pt.png' },
+      { rank: 6, name: 'Brazil', flag: 'https://flagcdn.com/w40/br.png' },
+      { rank: 7, name: 'Netherlands', flag: 'https://flagcdn.com/w40/nl.png' },
+      { rank: 8, name: 'Belgium', flag: 'https://flagcdn.com/w40/be.png' },
+      { rank: 9, name: 'Germany', flag: 'https://flagcdn.com/w40/de.png' },
+      { rank: 10, name: 'Croatia', flag: 'https://flagcdn.com/w40/hr.png' },
+      { rank: 11, name: 'Morocco', flag: 'https://flagcdn.com/w40/ma.png' },
+      { rank: 12, name: 'Colombia', flag: 'https://flagcdn.com/w40/co.png' },
+      { rank: 13, name: 'Uruguay', flag: 'https://flagcdn.com/w40/uy.png' },
+      { rank: 14, name: 'Switzerland', flag: 'https://flagcdn.com/w40/ch.png' },
+      { rank: 15, name: 'Japan', flag: 'https://flagcdn.com/w40/jp.png' },
+      { rank: 16, name: 'Senegal', flag: 'https://flagcdn.com/w40/sn.png' },
+      { rank: 17, name: 'Iran', flag: 'https://flagcdn.com/w40/ir.png' },
+      { rank: 18, name: 'United States', flag: 'https://flagcdn.com/w40/us.png' },
+      { rank: 19, name: 'Mexico', flag: 'https://flagcdn.com/w40/mx.png' },
+      { rank: 20, name: 'South Korea', flag: 'https://flagcdn.com/w40/kr.png' },
+      { rank: 21, name: 'Denmark', flag: 'https://flagcdn.com/w40/dk.png' },
+      { rank: 22, name: 'Austria', flag: 'https://flagcdn.com/w40/at.png' },
+      { rank: 23, name: 'Sweden', flag: 'https://flagcdn.com/w40/se.png' },
+      { rank: 24, name: 'Ecuador', flag: 'https://flagcdn.com/w40/ec.png' }
+    ];
+
+    const bottomTeams = [
+      { rank: 25, name: 'Canada', flag: 'https://flagcdn.com/w40/ca.png' },
+      { rank: 26, name: 'Paraguay', flag: 'https://flagcdn.com/w40/py.png' },
+      { rank: 27, name: 'Türkiye', flag: 'https://flagcdn.com/w40/tr.png' },
+      { rank: 28, name: 'Norway', flag: 'https://flagcdn.com/w40/no.png' },
+      { rank: 29, name: 'Egypt', flag: 'https://flagcdn.com/w40/eg.png' },
+      { rank: 30, name: 'Algeria', flag: 'https://flagcdn.com/w40/dz.png' },
+      { rank: 31, name: 'Tunisia', flag: 'https://flagcdn.com/w40/tn.png' },
+      { rank: 32, name: 'Australia', flag: 'https://flagcdn.com/w40/au.png' },
+      { rank: 33, name: 'Czechia', flag: 'https://flagcdn.com/w40/cz.png' },
+      { rank: 34, name: 'Poland', flag: 'https://flagcdn.com/w40/pl.png' },
+      { rank: 35, name: 'Serbia', flag: 'https://flagcdn.com/w40/rs.png' },
+      { rank: 36, name: 'Scotland', flag: 'https://flagcdn.com/w40/gb-sct.png' },
+      { rank: 37, name: 'Panama', flag: 'https://flagcdn.com/w40/pa.png' },
+      { rank: 38, name: 'Ivory Coast', flag: 'https://flagcdn.com/w40/ci.png' },
+      { rank: 39, name: 'Ghana', flag: 'https://flagcdn.com/w40/gh.png' },
+      { rank: 40, name: 'South Africa', flag: 'https://flagcdn.com/w40/za.png' },
+      { rank: 41, name: 'Qatar', flag: 'https://flagcdn.com/w40/qa.png' },
+      { rank: 42, name: 'Bosnia and Herzegovina', flag: 'https://flagcdn.com/w40/ba.png' },
+      { rank: 43, name: 'Iraq', flag: 'https://flagcdn.com/w40/iq.png' },
+      { rank: 44, name: 'Jordan', flag: 'https://flagcdn.com/w40/jo.png' },
+      { rank: 45, name: 'Uzbekistan', flag: 'https://flagcdn.com/w40/uz.png' },
+      { rank: 46, name: 'DR Congo', flag: 'https://flagcdn.com/w40/cd.png' },
+      { rank: 47, name: 'Cape Verde', flag: 'https://flagcdn.com/w40/cv.png' },
+      { rank: 48, name: 'New Zealand', flag: 'https://flagcdn.com/w40/nz.png' }
+    ];
+
+    let players = Array.from({ length: 24 }, (_, i) => ({
+      id: i + 1,
+      name: `Test #${i + 1}`,
+      top: null,
+      bottom: null
+    }));
+
+    let remainingTop = [];
+    let remainingBottom = [];
+    let remainingTopPlayers = [];
+    let remainingBottomPlayers = [];
+    let isAnimating = false;
+    let autoEnabled = false;
+    let autoTimer = null;
+
+    const topTeamsEl = document.getElementById('topTeams');
+    const bottomTeamsEl = document.getElementById('bottomTeams');
+    const playersEl = document.getElementById('players');
+
+    const drawButton = document.getElementById('drawButton');
+    const autoButton = document.getElementById('autoButton');
+    const namesButton = document.getElementById('namesButton');
+    const finalButton = document.getElementById('finalButton');
+    const resetButton = document.getElementById('resetButton');
+    const seedInput = document.getElementById('drawSeed');
+
+    const drawStatus = document.getElementById('drawStatus');
+    const topCounter = document.getElementById('topCounter');
+    const bottomCounter = document.getElementById('bottomCounter');
+    const playerCounter = document.getElementById('playerCounter');
+
+    const drawMascot = document.getElementById('drawMascot');
+    const drawReveal = document.getElementById('drawReveal');
+    const revealType = document.getElementById('revealType');
+    const revealPlayer = document.getElementById('revealPlayer');
+    const revealTopFlag = document.getElementById('revealTopFlag');
+    const revealTopTeam = document.getElementById('revealTopTeam');
+    const revealBottomFlag = document.getElementById('revealBottomFlag');
+    const revealBottomTeam = document.getElementById('revealBottomTeam');
+
+    const finalOverlay = document.getElementById('finalOverlay');
+    const resultsBody = document.getElementById('resultsBody');
+    const closeFinal = document.getElementById('closeFinal');
+
+    const namesOverlay = document.getElementById('namesOverlay');
+    const namesTextarea = document.getElementById('namesTextarea');
+    const closeNames = document.getElementById('closeNames');
+    const saveNamesButton = document.getElementById('saveNamesButton');
+    const fillTestNamesButton = document.getElementById('fillTestNamesButton');
+
+    // This now relies on the overridden Math.random() from seedrandom
+    function randomItem(array) {
+      return array[Math.floor(Math.random() * array.length)];
+    }
+
+    function removeItem(array, item) {
+      const index = array.indexOf(item);
+      if (index >= 0) array.splice(index, 1);
+    }
+
+    function stopAutoDraw() {
+      autoEnabled = false;
+      autoButton.textContent = 'Auto Draw: Off';
+      if (autoTimer) {
+        clearTimeout(autoTimer);
+        autoTimer = null;
+      }
+    }
+
+    function scheduleAutoDraw() {
+      if (!autoEnabled || isAnimating) return;
+
+      if (remainingTopPlayers.length === 0) {
+        stopAutoDraw();
+        return;
+      }
+
+      autoTimer = setTimeout(() => {
+        drawNext();
+      }, 1400);
+    }
+
+    function resetDraw() {
+      stopAutoDraw();
+
+      // Initialize the seed right at the start of the process
+      const currentSeed = seedInput.value.trim() || 'Heavyweights';
+      Math.seedrandom(currentSeed);
+
+      players = players.map((player, index) => ({
+        id: index + 1,
+        name: player.name || `Test #${index + 1}`,
+        top: null,
+        bottom: null
+      }));
+
+      remainingTop = [...topTeams];
+      remainingBottom = [...bottomTeams];
+      remainingTopPlayers = [...players];
+      remainingBottomPlayers = [...players];
+
+      isAnimating = false;
+      finalButton.disabled = true;
+      drawButton.disabled = false;
+      finalOverlay.classList.remove('visible');
+      drawReveal.classList.remove('visible');
+
+      render();
+      drawStatus.textContent = 'Ready to draw first player';
+    }
+
+    function renderTeamList(container, teams, type) {
+      container.innerHTML = '';
+
+      teams.forEach(team => {
+        const isUsed = type === 'top'
+          ? !remainingTop.includes(team)
+          : !remainingBottom.includes(team);
+
+        const div = document.createElement('div');
+        div.className = `team-card ${isUsed ? 'used' : ''}`;
+        div.id = `${type}-team-${team.rank}`;
+
+        div.innerHTML = `
+          <div class="team-rank">#${team.rank}</div>
+          <div class="team-name">
+            <img class="flag" src="${team.flag}" alt="${team.name} flag">
+            ${team.name}
+          </div>
+          <div class="team-pill ${type === 'bottom' ? 'bottom' : ''}">
+            ${type === 'top' ? 'Top' : 'Underdog'}
+          </div>
+        `;
+
+        container.appendChild(div);
+      });
+    }
+
+    function renderPlayers() {
+      playersEl.innerHTML = '';
+
+      players.forEach(player => {
+        const div = document.createElement('div');
+        div.className = 'player-card';
+        div.id = `player-${player.id}`;
+
+        div.innerHTML = `
+          <div class="number-badge">${player.id}</div>
+          <div>
+            <div class="player-name">${player.name}</div>
+            <div class="assignments">
+              <div class="assignment-line">
+                Top:
+                ${player.top
+                  ? `<strong><img class="flag" src="${player.top.flag}" alt="${player.top.name} flag">${player.top.name}</strong>`
+                  : '—'}
+              </div>
+              <div class="assignment-line">
+                Underdog:
+                ${player.bottom
+                  ? `<strong><img class="flag" src="${player.bottom.flag}" alt="${player.bottom.name} flag">${player.bottom.name}</strong>`
+                  : '—'}
+              </div>
+            </div>
+          </div>
+        `;
+
+        playersEl.appendChild(div);
+      });
+    }
+
+    function updateCounters() {
+      const playersDrawn = 24 - remainingTopPlayers.length;
+      const topDrawn = 24 - remainingTop.length;
+      const bottomDrawn = 24 - remainingBottom.length;
+
+      topCounter.textContent = `${topDrawn} / 24 drawn`;
+      bottomCounter.textContent = `${bottomDrawn} / 24 drawn`;
+      playerCounter.textContent = `${playersDrawn} / 24 players`;
+
+      if (playersDrawn < 24) {
+        drawStatus.textContent = `Drawing player ${playersDrawn + 1} of 24`;
+      } else {
+        drawStatus.textContent = 'Draw complete. Show the final breakdown.';
+        drawButton.disabled = true;
+        finalButton.disabled = false;
+      }
+    }
+
+    function render() {
+      renderTeamList(topTeamsEl, topTeams, 'top');
+      renderTeamList(bottomTeamsEl, bottomTeams, 'bottom');
+      renderPlayers();
+      updateCounters();
+    }
+
+    function highResFlag(url) {
+      return url.replace('/w40/', '/w320/');
+    }
+
+    function showDrawReveal(player, topTeam, bottomTeam, callback) {
+      revealType.textContent = 'Player Draw';
+      revealPlayer.textContent = player.name;
+
+      revealTopFlag.src = highResFlag(topTeam.flag);
+      revealTopFlag.alt = `${topTeam.name} flag`;
+      revealTopTeam.textContent = topTeam.name;
+
+      revealBottomFlag.src = highResFlag(bottomTeam.flag);
+      revealBottomFlag.alt = `${bottomTeam.name} flag`;
+      revealBottomTeam.textContent = bottomTeam.name;
+
+      drawReveal.classList.add('visible');
+
+      setTimeout(() => {
+        drawReveal.classList.remove('visible');
+        callback();
+      }, 4300);
+    }
+
+    function animateTeamToPlayer(team, type, player, callback) {
+      const teamEl = document.getElementById(`${type}-team-${team.rank}`);
+      const playerEl = document.getElementById(`player-${player.id}`);
+
+      if (!teamEl || !playerEl) {
+        callback();
+        return;
+      }
+
+      const from = teamEl.getBoundingClientRect();
+      const to = playerEl.getBoundingClientRect();
+
+      const flying = document.createElement('div');
+      flying.className = 'flying-team';
+      flying.innerHTML = `
+        <img class="flag" src="${team.flag}" alt="${team.name} flag">
+        <span>${team.name}</span>
+      `;
+
+      flying.style.left = `${from.left + from.width / 2}px`;
+      flying.style.top = `${from.top + from.height / 2}px`;
+      flying.style.transform = 'translate(-50%, -50%) scale(0.8)';
+      flying.style.opacity = '0';
+
+      document.body.appendChild(flying);
+      playerEl.classList.add('highlight');
+
+      requestAnimationFrame(() => {
+        flying.style.opacity = '1';
+        flying.style.transform = `
+          translate(
+            ${to.left + to.width / 2 - (from.left + from.width / 2)}px,
+            ${to.top + to.height / 2 - (from.top + from.height / 2)}px
+          )
+          translate(-50%, -50%)
+          scale(1.08)
+        `;
+      });
+
+      setTimeout(() => {
+        flying.style.opacity = '0';
+      }, 760);
+
+      setTimeout(() => {
+        flying.remove();
+        playerEl.classList.remove('highlight');
+        callback();
+      }, 950);
+    }
+
+    function drawNext() {
+      if (isAnimating) return;
+
+      if (remainingTopPlayers.length === 0 || remainingTop.length === 0 || remainingBottom.length === 0) {
+        showFinal();
+        return;
+      }
+
+      // If the seed has changed manually mid-draw without a reset, we don't re-seed here
+      // so the sequence remains continuous.
+
+      const player = randomItem(remainingTopPlayers);
+      const topTeam = randomItem(remainingTop);
+      const bottomTeam = randomItem(remainingBottom);
+
+      removeItem(remainingTopPlayers, player);
+      removeItem(remainingBottomPlayers, player);
+      removeItem(remainingTop, topTeam);
+      removeItem(remainingBottom, bottomTeam);
+
+      isAnimating = true;
+      drawButton.disabled = true;
+
+      drawMascot.classList.add('drawing');
+      setTimeout(() => drawMascot.classList.remove('drawing'), 950);
+
+      drawStatus.textContent = `Drawing ${topTeam.name} and ${bottomTeam.name} for ${player.name}...`;
+
+      showDrawReveal(player, topTeam, bottomTeam, () => {
+        animateTeamToPlayer(topTeam, 'top', player, () => {
+          animateTeamToPlayer(bottomTeam, 'bottom', player, () => {
+            player.top = topTeam;
+            player.bottom = bottomTeam;
+
+            isAnimating = false;
+            drawButton.disabled = false;
+            render();
+
+            if (remainingTopPlayers.length === 0) {
+              launchConfetti();
+              stopAutoDraw();
+            } else {
+              scheduleAutoDraw();
+            }
+          });
+        });
+      });
+    }
+
+    function showFinal() {
+      resultsBody.innerHTML = '';
+
+      players.forEach(player => {
+        const row = document.createElement('tr');
+
+        row.innerHTML = `
+          <td><strong>${player.name}</strong></td>
+          <td>
+            ${player.top
+              ? `<img class="flag" src="${player.top.flag}" alt="${player.top.name} flag"> ${player.top.name} <small>(#${player.top.rank})</small>`
+              : '—'}
+          </td>
+          <td>
+            ${player.bottom
+              ? `<img class="flag" src="${player.bottom.flag}" alt="${player.bottom.name} flag"> ${player.bottom.name} <small>(#${player.bottom.rank})</small>`
+              : '—'}
+          </td>
+        `;
+
+        resultsBody.appendChild(row);
+      });
+
+      finalOverlay.classList.add('visible');
+    }
+
+    function launchConfetti() {
+      const colours = ['#35d0ba', '#ffcb4c', '#ff5c7a', '#72f29b', '#ffffff'];
+
+      for (let i = 0; i < 120; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'confetti-piece';
+        piece.style.left = `${Math.random() * 100}vw`;
+        piece.style.background = colours[Math.floor(Math.random() * colours.length)];
+        piece.style.animationDuration = `${2.4 + Math.random() * 2.4}s`;
+        piece.style.animationDelay = `${Math.random() * 0.35}s`;
+        piece.style.transform = `rotate(${Math.random() * 360}deg)`;
+        document.body.appendChild(piece);
+
+        setTimeout(() => piece.remove(), 5200);
+      }
+    }
+
+    function openNamesEditor() {
+      namesTextarea.value = players.map(player => player.name).join('\n');
+      namesOverlay.classList.add('visible');
+    }
+
+    function saveNames() {
+      const names = namesTextarea.value
+        .split('\n')
+        .map(name => name.trim())
+        .filter(Boolean)
+        .slice(0, 24);
+
+      while (names.length < 24) {
+        names.push(`Test #${names.length + 1}`);
+      }
+
+      players = names.map((name, index) => ({
+        id: index + 1,
+        name,
+        top: null,
+        bottom: null
+      }));
+
+      namesOverlay.classList.remove('visible');
+      resetDraw(); // This will lock in the seed and restart
+    }
+
+    function fillTestNames() {
+      namesTextarea.value = Array.from({ length: 24 }, (_, i) => `Test #${i + 1}`).join('\n');
+    }
+
+    drawButton.addEventListener('click', drawNext);
+
+    autoButton.addEventListener('click', () => {
+      autoEnabled = !autoEnabled;
+      autoButton.textContent = autoEnabled ? 'Auto Draw: On' : 'Auto Draw: Off';
+
+      if (autoEnabled) {
+        drawNext();
+      } else {
+        stopAutoDraw();
+      }
+    });
+
+    namesButton.addEventListener('click', openNamesEditor);
+    closeNames.addEventListener('click', () => namesOverlay.classList.remove('visible'));
+    saveNamesButton.addEventListener('click', saveNames);
+    fillTestNamesButton.addEventListener('click', fillTestNames);
+
+    finalButton.addEventListener('click', showFinal);
+    resetButton.addEventListener('click', resetDraw);
+    closeFinal.addEventListener('click', () => finalOverlay.classList.remove('visible'));
+    
+    // Changing the seed manually resets the draw
+    seedInput.addEventListener('change', resetDraw);
+
+    resetDraw();
+  </script>
+</body>
+</html>
